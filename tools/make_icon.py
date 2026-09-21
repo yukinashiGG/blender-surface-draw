@@ -1,4 +1,4 @@
-"""Generate the toolbar icon (src/surface_draw/surface_draw_icon.dat).
+"""Generate the toolbar icon (src/surface_weight_paint/surface_weight_paint_icon.dat).
 
 Blender's toolbar icons are tiny triangle meshes in the "VCO" format that
 release/datafiles/blender_icons_geom.py writes (header 'VCO\\0', 255, 255, 0, 0;
@@ -24,7 +24,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "..", "src", "surface_draw", "surface_draw_icon.dat")
+OUT = os.path.join(HERE, "..", "src", "surface_weight_paint", "surface_weight_paint_icon.dat")
 
 LIGHT = (229, 229, 229, 255)
 MID = (144, 144, 144, 255)

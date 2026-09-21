@@ -1,11 +1,11 @@
 schema_version = "1.0.0"
-id = "surface_draw"
-version = "1.1.1"
-name = "Surface Draw (Geodesic Weight Brush)"
+id = "surface_weight_paint"
+version = "1.1.2"
+name = "Surface Weight Paint (Geodesic Weight Brush)"
 tagline = "Weight brush that falls off along the surface, never onto nearby unconnected parts"
 maintainer = "Yukinashi <yukinashi.contact@gmail.com>"
 type = "add-on"
 blender_version_min = "4.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
 tags = ["Paint", "Rigging"]
-website = "https://github.com/yukinashiGG/blender-surface-draw"
+website = "https://github.com/yukinashiGG/blender-surface-weight-paint"

@@ -1,4 +1,4 @@
-# Surface Draw — Geodesic Weight Brush for Blender
+# Surface Weight Paint — Geodesic Weight Brush for Blender
 
 A weight paint brush that falls off **along the surface** instead of through
 space — handy for weighting fingers and strands of hair. Painting one finger
@@ -15,12 +15,12 @@ face under the cursor is never touched, however close it sits.
 
 ## Install
 
-1. Download `surface_draw_v1_1_1.zip` from
-   [Releases](https://github.com/yukinashiGG/blender-surface-draw/releases).
+1. Download `surface_weight_paint_v1_1_2.zip` from
+   [Releases](https://github.com/yukinashiGG/blender-surface-weight-paint/releases).
 2. In Blender: **Edit > Preferences > Get Extensions > ⌄ (top right) > Install
    from Disk…** and pick the zip. Or just drag the zip into a Blender window.
-3. The tool appears in the **Weight Paint toolbar** as **Surface Draw**, right
-   after the standard brushes.
+3. The tool appears in the **Weight Paint toolbar** as **Surface Weight Paint**, just
+   below the standard brushes.
 
 ## Use
 
@@ -29,19 +29,19 @@ face under the cursor is never touched, however close it sits.
 | LMB drag | Paint with the current brush weight / strength / blend |
 | Ctrl + LMB | Invert (Mix → 1 − weight, Add ↔ Subtract, Lighten ↔ Darken) |
 | Shift + LMB | Blur toward edge-connected neighbours |
-| Header **X** | Mirror to the left/right-flipped vertex group |
+| Symmetry **X** (header) | Also paints the mirrored vertices, into the left/right-flipped group (Hand.L → Hand.R) |
 
 The header shows the same controls as the standard Draw brush (brush selector,
 Weight, Radius, Strength, Brush / Stroke / Falloff / Cursor). Everything you
-set there is what Surface Draw uses.
+set there is what Surface Weight Paint uses.
 
-**Sidebar (N) > Surface Draw**
+**Sidebar (N) > Surface Weight Paint**
 
 - **Start Resident Mode** — keeps the brush running without switching tools.
   Esc or RMB exits.
-- **Surface Gradient** — takes the vertices that already carry weight as seeds
-  and falls off outward along the surface by a given distance. Handy for
-  making a clean ramp from a hard-painted core.
+- **Surface Gradient** — starts from the vertices at or above Seed Threshold
+  (fully weighted by default) and falls off outward along the surface over the
+  given distance. Paint the core solid, then let this make the ramp.
 
 ## How it works
 
@@ -49,8 +49,9 @@ Distance is measured by walking the mesh's edges (Dijkstra, cut off at the
 brush radius), so the falloff follows the geometry. The brush radius on screen
 is converted to a distance on the surface at the point under the cursor.
 
-Blender's stroke handling is in C and only the falloff cannot be swapped, so
-the brush is a modal operator of its own that reads the active brush's settings.
+Blender's stroke handling lives in C and gives add-ons no way to replace just
+the falloff, so the brush is a modal operator of its own that reads the active
+brush's settings.
 
 ## Limits
 
@@ -62,6 +63,14 @@ the brush is a modal operator of its own that reads the active brush's settings.
 - Multi-Paint and Lock-Relative display modes are not consulted.
 
 ## Changelog
+
+**1.1.2**
+- Renamed to **Surface Weight Paint** (was Surface Draw): tool, sidebar tab,
+  extension id (`surface_weight_paint`) and repository. If you installed
+  1.1.0 or 1.1.1, remove it first, then install this zip.
+- Tooltips for X Mirror and Surface Gradient now say what they do (mirrored
+  vertices go into the left/right-flipped group; the gradient starts from
+  vertices at or above Seed Threshold). No behaviour change.
 
 **1.1.1**
 - New toolbar icon: a brush tip inside a ripple spreading over the surface.
@@ -99,11 +108,11 @@ the brush is a modal operator of its own that reads the active brush's settings.
 
 ## インストール
 
-1. [Releases](https://github.com/yukinashiGG/blender-surface-draw/releases) から
-   `surface_draw_v1_1_1.zip` をダウンロード。
+1. [Releases](https://github.com/yukinashiGG/blender-surface-weight-paint/releases) から
+   `surface_weight_paint_v1_1_2.zip` をダウンロード。
 2. Blender の **編集 > プリファレンス > 拡張機能を入手 > 右上の ⌄ > ディスクから
    インストール…** で zip を選ぶか、zip を Blender のウィンドウにドラッグ＆ドロップ。
-3. **ウェイトペイントのツールバー**に **Surface Draw** が標準ブラシの後ろに出ます。
+3. **ウェイトペイントのツールバー**の、標準ブラシのすぐ下に **Surface Weight Paint** が並びます。
 
 ## 使い方
 
@@ -112,17 +121,18 @@ the brush is a modal operator of its own that reads the active brush's settings.
 | 左ドラッグ | 現在のブラシのウェイト／強さ／ブレンドで塗る |
 | Ctrl + 左 | 反転（Mix は 1 − ウェイト、Add ↔ Subtract、Lighten ↔ Darken） |
 | Shift + 左 | 辺でつながった隣接頂点の平均へぼかす |
-| ヘッダーの **X** | 名前を左右反転した頂点グループへミラー |
+| ヘッダーのシンメトリ **X** | 鏡像側の頂点にも塗る。書き込み先は名前を左右反転した頂点グループ（Hand.L → Hand.R） |
 
 ヘッダーには標準の Draw ブラシと同じ項目（ブラシ選択・Weight・Radius・Strength・
 Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値がそのまま使われます。
 
-**サイドバー (N) > Surface Draw**
+**サイドバー (N) > Surface Weight Paint**
 
 - **常駐モードで開始** — ツールを切り替えずにブラシを常駐させます。Esc か
   右クリックで終了。
-- **Surface Gradient** — いまウェイトが乗っている頂点を種にして、面づたいに
-  指定距離で外へ減衰させます。ベタ塗りした芯からきれいなグラデーションを作るのに。
+- **Surface Gradient** — しきい値以上のウェイトが乗っている頂点（既定では 1.0 の
+  部分）を種にして、そこから面づたいに指定した距離まで減衰させます。芯だけベタ塗り
+  しておけば、周りのグラデーションはこれで作れます。
 
 ## 制限
 
@@ -133,6 +143,14 @@ Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値が�
 - マルチペイント・Lock-Relative 表示は考慮しません。
 
 ## 更新履歴
+
+**1.1.2**
+- 名前を **Surface Weight Paint** に変更（旧 Surface Draw）。ツール名・サイドバーの
+  タブ・拡張機能の id（`surface_weight_paint`）・リポジトリ名を揃えました。1.1.0 /
+  1.1.1 を入れている場合は、先にそちらを削除してからこの zip を入れてください。
+- X ミラーと Surface Gradient のツールチップを、実際の動作が分かる書き方に
+  （鏡像側は名前を左右反転したグループへ書く／グラデーションの種はしきい値以上の
+  頂点）。動作の変更はなし。
 
 **1.1.1**
 - ツールバーに専用アイコンを追加（ブラシの先から波紋が面に広がる図）。
@@ -160,12 +178,12 @@ Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値が�
 ## Development
 
 ```
-blender-surface-draw/
-  src/surface_draw/   the extension (what goes into the zip; id = surface_draw)
-                      surface_draw_icon.dat is the toolbar icon (VCO triangle
+blender-surface-weight-paint/
+  src/surface_weight_paint/   the extension (what goes into the zip; id = surface_weight_paint)
+                      surface_weight_paint_icon.dat is the toolbar icon (VCO triangle
                       format, same as Blender's own); tools/make_icon.py writes it
   tools/make_icon.py  icon generator (--preview mocks the toolbar as a PNG)
-  dist/               built zips, e.g. surface_draw_v1_1_1.zip (not committed)
+  dist/               built zips, e.g. surface_weight_paint_v1_1_2.zip (not committed)
   mcp_check.py        verification harness: run with
                       blender --factory-startup --python mcp_check.py
 ```

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Surface Draw - a weight paint brush that falls off along the surface.
+"""Surface Weight Paint - a weight paint brush that falls off along the surface.
 
 The built-in brushes fall off by straight-line (or screen) distance, so
 painting one thigh bleeds into the other and painting an arm bleeds into the
@@ -29,9 +29,9 @@ weight paint brush, and the header shows the same controls as the standard
 brush, so it behaves like one.
 
 Usage:
-    (1) Pick "Surface Draw" in the toolbar (left column) in Weight Paint mode.
+    (1) Pick "Surface Weight Paint" in the toolbar (left column) in Weight Paint mode.
         LMB drag paints, Ctrl+LMB inverts, Shift+LMB blurs - same as Draw.
-    (2) Sidebar (N) > Surface Draw > "Start Resident Mode" keeps the brush
+    (2) Sidebar (N) > Surface Weight Paint > "Start Resident Mode" keeps the brush
         running without switching tools; Esc or RMB leaves it.
 
 Packaged as an extension. bl_info is kept only so the build script can read
@@ -41,11 +41,11 @@ Verified on Blender 5.2.2 LTS, 4.5.11 LTS, 4.3.1 and 4.2.23 LTS.
 """
 
 bl_info = {
-    "name": "Surface Draw (Geodesic Weight Brush)",
+    "name": "Surface Weight Paint (Geodesic Weight Brush)",
     "author": "Yukinashi",
-    "version": (1, 1, 1),
+    "version": (1, 1, 2),
     "blender": (4, 2, 0),
-    "location": "3D Viewport > Weight Paint > Toolbar / Sidebar > Surface Draw",
+    "location": "3D Viewport > Weight Paint > Toolbar / Sidebar > Surface Weight Paint",
     "description": "Weight paint brush that falls off along the surface, "
                    "so nearby but unconnected parts are never painted",
     "category": "Paint",
@@ -384,7 +384,7 @@ def _locked_group_indices(obj):
 
 class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
     bl_idname = "paint.geodesic_weight_brush"
-    bl_label = "Surface Draw"
+    bl_label = "Surface Weight Paint"
     bl_description = ("Weight brush that falls off along the surface. "
                       "Faces that are not connected are never painted, "
                       "however close they are")
@@ -519,7 +519,7 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
             self._handle = bpy.types.SpaceView3D.draw_handler_add(
                 self._draw_cursor, (context,), 'WINDOW', 'POST_PIXEL')
             self.area.header_text_set(iface_(
-                "Surface Draw - LMB: paint / Ctrl+LMB: invert / "
+                "Surface Weight Paint - LMB: paint / Ctrl+LMB: invert / "
                 "Shift+LMB: blur / Esc, RMB: exit"))
             context.window.cursor_modal_set('PAINT_BRUSH')
 
@@ -559,7 +559,7 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
                 if self.painting:
                     self.painting = False
                     if self.dabs:
-                        bpy.ops.ed.undo_push(message="Surface Draw")
+                        bpy.ops.ed.undo_push(message="Surface Weight Paint")
                 if self.stroke_mode:
                     return self._finish(context)
                 return {'RUNNING_MODAL'}
@@ -582,7 +582,7 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
             self._dab(context, event, bv)
             return True
         except Exception as exc:
-            self.report({'ERROR'}, iface_("Surface Draw stopped: %s") % exc)
+            self.report({'ERROR'}, iface_("Surface Weight Paint stopped: %s") % exc)
             return False
 
     def _finish(self, context):
@@ -599,11 +599,11 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
                 pass
             context.window.cursor_modal_restore()
             self.report({'INFO'},
-                        iface_("Surface Draw finished: %d dabs, %d vertex writes")
+                        iface_("Surface Weight Paint finished: %d dabs, %d vertex writes")
                         % (self.dabs, self.touched))
         elif self.painting and self.dabs:
             # Stroke cut short by a mode change etc. - still one undo step
-            bpy.ops.ed.undo_push(message="Surface Draw")
+            bpy.ops.ed.undo_push(message="Surface Weight Paint")
         try:
             self.area.tag_redraw()
         except Exception:
@@ -848,7 +848,7 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
 class PAINT_OT_geodesic_weight_spread(bpy.types.Operator):
     bl_idname = "paint.geodesic_weight_spread"
     bl_label = "Surface Gradient"
-    bl_description = ("Use the vertices that already carry weight as seeds "
+    bl_description = ("Start from the vertices at or above Seed Threshold "
                       "and fall off outward along the surface")
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -961,11 +961,11 @@ class PAINT_OT_geodesic_weight_spread(bpy.types.Operator):
 # ==========================================================================
 
 class VIEW3D_PT_geodesic_weight(bpy.types.Panel):
-    bl_label = "Surface Draw"
+    bl_label = "Surface Weight Paint"
     bl_idname = "VIEW3D_PT_geodesic_weight"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Surface Draw"
+    bl_category = "Surface Weight Paint"
 
     @classmethod
     def poll(cls, context):
@@ -976,7 +976,7 @@ class VIEW3D_PT_geodesic_weight(bpy.types.Panel):
         obj = context.active_object
 
         box0 = layout.box()
-        box0.label(text="Toolbar tool: Surface Draw", icon='TOOL_SETTINGS')
+        box0.label(text="Brush is in the toolbar", icon='TOOL_SETTINGS')
 
         col = layout.column(align=True)
         col.scale_y = 1.4
@@ -1055,7 +1055,7 @@ class GeodesicWeightTool(bpy.types.WorkSpaceTool):
     bl_space_type = 'VIEW_3D'
     bl_context_mode = 'PAINT_WEIGHT'
     bl_idname = TOOL_IDNAME
-    bl_label = "Surface Draw"
+    bl_label = "Surface Weight Paint"
     bl_description = ("Weight brush that falls off along the surface.\n"
                       "Faces that are not connected are never painted, "
                       "however close they are")
@@ -1096,7 +1096,7 @@ class GeodesicWeightTool(bpy.types.WorkSpaceTool):
 # bl_icon as os.path.join(<datafiles>/icons, bl_icon + ".dat"), and join()
 # discards its first part when the second is absolute, so an absolute path
 # without the extension loads a file shipped with the extension.
-ICON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "surface_draw_icon")
+ICON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "surface_weight_paint_icon")
 
 
 def _pick_icon():
@@ -1108,7 +1108,7 @@ def _pick_icon():
             bpy.app.icons.release(bpy.app.icons.new_triangles_from_file(ICON_FILE + ".dat"))
             return ICON_FILE
         except Exception as exc:
-            print("[Surface Draw] bundled icon not usable:", exc)
+            print("[Surface Weight Paint] bundled icon not usable:", exc)
     try:
         root = bpy.utils.system_resource('DATAFILES', path="icons")
     except Exception:
@@ -1162,17 +1162,20 @@ _JA = {
     # tool / operator
     "Weight brush that falls off along the surface. Faces that are not "
     "connected are never painted, however close they are":
-        "辺づたいの距離で減衰するウェイトブラシ。地続きでない面は近くても塗られない",
+        "面の上を辺づたいの距離で減衰するウェイトブラシ。"
+        "辺でつながっていない面には、どれだけ近くても塗られない",
     "Weight brush that falls off along the surface.\nFaces that are not "
     "connected are never painted, however close they are":
-        "辺づたいの距離で減衰するウェイトブラシ。\n地続きでない面は近くても塗られない",
+        "面の上を辺づたいの距離で減衰するウェイトブラシ。\n"
+        "辺でつながっていない面には、どれだけ近くても塗られない",
     "Radius Scale": "半径の倍率",
     "Geodesic radius as a multiple of the brush circle. 1.0 matches the circle":
         "ブラシ円に対する測地半径の倍率。1.0 で円の見た目どおり",
     "X Mirror": "X ミラー",
     "Paint symmetrically: the mirrored vertex gets the same result, written "
     "to the left/right-flipped group":
-        "左右対称に塗る。鏡像の頂点に同じ結果を、名前を左右反転したグループへ書く",
+        "左右対称に塗る。鏡像側の頂点にも同じ結果を、名前を左右反転した"
+        "頂点グループ（Hand.L なら Hand.R）へ書き込む",
     "Invert": "反転",
     "Invert the brush (same as Ctrl+drag)": "ブラシを反転する（Ctrl+ドラッグ相当）",
     "Blur": "ぼかし",
@@ -1186,15 +1189,16 @@ _JA = {
         "ミラー先のグループ '%s' がロックされているのでミラーは行いません",
     "Run this in a 3D Viewport": "3D ビューで実行してください",
     "Created vertex group %s": "頂点グループ %s を作成しました",
-    "Surface Draw - LMB: paint / Ctrl+LMB: invert / Shift+LMB: blur / Esc, RMB: exit":
-        "Surface Draw — 左:塗る / Ctrl+左:反転 / Shift+左:ぼかし / Esc・右クリック:終了",
-    "Surface Draw stopped: %s": "Surface Draw を中断しました: %s",
-    "Surface Draw finished: %d dabs, %d vertex writes":
-        "Surface Draw 終了  打点 %d 回 / 延べ %d 頂点",
+    "Surface Weight Paint - LMB: paint / Ctrl+LMB: invert / Shift+LMB: blur / Esc, RMB: exit":
+        "Surface Weight Paint — 左:塗る / Ctrl+左:反転 / Shift+左:ぼかし / Esc・右クリック:終了",
+    "Surface Weight Paint stopped: %s": "Surface Weight Paint を中断しました: %s",
+    "Surface Weight Paint finished: %d dabs, %d vertex writes":
+        "Surface Weight Paint 終了  打点 %d 回 / 延べ %d 頂点",
     # gradient
-    "Use the vertices that already carry weight as seeds and fall off "
+    "Start from the vertices at or above Seed Threshold and fall off "
     "outward along the surface":
-        "いまウェイトが乗っている範囲を種にして、辺づたいの距離で外側へ減衰させる",
+        "しきい値以上のウェイトが乗っている頂点を種にして、"
+        "そこから面づたいに外側へ減衰させる",
     "Distance": "距離",
     "Distance from the seed edge at which the weight reaches 0":
         "種の縁から何メートル先で 0 になるか",
@@ -1212,7 +1216,7 @@ _JA = {
         "種が見つかりません。しきい値以上のウェイトを塗ってから実行してください",
     "Updated %d vertices (%d reached)": "%d 頂点を更新（到達 %d 頂点）",
     # panel
-    "Toolbar tool: Surface Draw": "本体はツールバーの「Surface Draw」",
+    "Brush is in the toolbar": "本体はツールバーにあります",
     "Start Resident Mode": "常駐モードで開始",
     "Uses the standard brush settings": "ブラシ設定は標準のものを使います",
     "Radius %d px": "半径 %d px",
@@ -1251,7 +1255,7 @@ def register():
     try:
         bpy.app.translations.register(__name__, _translation_dict())
     except Exception as exc:
-        print("[Surface Draw] translations not registered:", exc)
+        print("[Surface Weight Paint] translations not registered:", exc)
 
     GeodesicWeightTool.bl_icon = _pick_icon()
     present = _existing_tool_idnames()

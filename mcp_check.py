@@ -1,4 +1,4 @@
-"""Verification harness for Surface Draw (geodesic_weight_brush).
+"""Verification harness for Surface Weight Paint (geodesic_weight_brush).
 
 Runs in a separate, windowed Blender (the brush needs a 3D viewport for
 ray casts and screen-space radii):
@@ -16,12 +16,12 @@ import bpy
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PKG = os.path.join(HERE, "src", "surface_draw")
+PKG = os.path.join(HERE, "src", "surface_weight_paint")
 # CHECK_OUT lets two Blender versions run at once without sharing files
 HERE = os.environ.get("CHECK_OUT", HERE)
 LOG = os.path.join(HERE, "check_log.txt")
 USE_INSTALLED = os.environ.get("USE_INSTALLED") == "1"
-INSTALLED_MODULE = "bl_ext.user_default.surface_draw"
+INSTALLED_MODULE = "bl_ext.user_default.surface_weight_paint"
 
 _lines = []
 _fails = 0
@@ -50,10 +50,10 @@ def load_module():
         addon_utils.enable(INSTALLED_MODULE, default_set=True)
         return sys.modules[INSTALLED_MODULE]
     spec = importlib.util.spec_from_file_location(
-        "surface_draw", os.path.join(PKG, "__init__.py"),
+        "surface_weight_paint", os.path.join(PKG, "__init__.py"),
         submodule_search_locations=[PKG])
     mod = importlib.util.module_from_spec(spec)
-    sys.modules["surface_draw"] = mod
+    sys.modules["surface_weight_paint"] = mod
     spec.loader.exec_module(mod)
     mod.register()
     return mod
@@ -264,7 +264,7 @@ def _screenshot_steps():
     tmp = []
     for cat in ("Item", "Tool", "View"):
         cls = type("VIEW3D_PT_geodesic_weight_shot_" + cat, (bpy.types.Panel,), {
-            "bl_label": "Surface Draw", "bl_space_type": 'VIEW_3D',
+            "bl_label": "Surface Weight Paint", "bl_space_type": 'VIEW_3D',
             "bl_region_type": 'UI', "bl_category": cat, "bl_order": -1,   # above Transform
             "draw": lambda self, context: bpy.types.VIEW3D_PT_geodesic_weight.draw(self, context),
         })
@@ -523,7 +523,7 @@ def run():
         bpy.ops.ed.undo_push(message="before")
         st = make_state(mod, ctx, ob)
         dabs(st, ctx, mod, xy)
-        bpy.ops.ed.undo_push(message="Surface Draw")
+        bpy.ops.ed.undo_push(message="Surface Weight Paint")
         after = weights(ob, "Bone.L")[vi]
         name = ob.name
         bpy.ops.ed.undo()
