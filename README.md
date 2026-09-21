@@ -7,7 +7,7 @@ face under the cursor is never touched, however close it sits.
 
 日本語は[下](#日本語)にあります。
 
-- Blender **4.2 or later** (verified on 4.5.11 LTS / 4.3.1 / 4.2.23 LTS)
+- Blender **4.2 or later** (verified on 5.2.2 LTS / 4.5.11 LTS / 4.3.1 / 4.2.23 LTS)
 - Free, GPL-3.0-or-later
 - Works with the standard brush settings and header (weight, radius, strength,
   pressure, falloff curve, spacing, blend mode, X mirror, auto normalize,
@@ -87,7 +87,7 @@ the brush is a modal operator of its own that reads the active brush's settings.
 便利です。隣の指を塗っても反対の指に乗らず、カーソル下の面と辺でつながっていない
 部分は、どれだけ近くても一切塗られません。
 
-- Blender **4.2 以降**（4.5.11 LTS / 4.3.1 / 4.2.23 LTS で検証）
+- Blender **4.2 以降**（5.2.2 LTS / 4.5.11 LTS / 4.3.1 / 4.2.23 LTS で検証）
 - 無償・GPL-3.0-or-later
 - 標準ブラシの設定とヘッダーをそのまま使います（ウェイト・半径・強さ・筆圧・
   減衰カーブ・間隔・ブレンド・X ミラー・自動正規化・面/頂点の選択マスク）

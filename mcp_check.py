@@ -165,15 +165,26 @@ def aim(context, ob, xy=None):
 
 def set_brush(context, blend='MIX', weight=1.0, strength=1.0, size=120, preset='SMOOTH'):
     ts = context.tool_settings
-    ups = ts.unified_paint_settings
+    ups = G["mod"].unified_paint_settings(context)     # moved onto Paint in 5.0
     ups.use_unified_weight = ups.use_unified_strength = ups.use_unified_size = False
     brush = ts.weight_paint.brush
     if brush is not None:
         brush.blend, brush.weight, brush.strength, brush.size = blend, weight, strength, size
-        brush.curve_preset = preset
-        brush.use_space = False
+        set_preset(brush, preset)
+        if hasattr(brush, "use_space"):
+            brush.use_space = False
+        else:
+            brush.stroke_method = 'DOTS'           # 5.x: no use_space
         brush.use_pressure_size = brush.use_pressure_strength = False
     return brush
+
+
+def set_preset(brush, preset):
+    """Falloff preset, under its 4.x or 5.x name."""
+    if hasattr(brush, "curve_distance_falloff_preset"):
+        brush.curve_distance_falloff_preset = preset
+    else:
+        brush.curve_preset = preset
 
 
 def dabs(st, context, mod, xy, n=25):
@@ -368,13 +379,13 @@ def run():
         set_brush(ctx, 'MIX')
         for preset in ("SMOOTH", "SMOOTHER", "SPHERE", "ROOT", "SHARP", "LIN", "POW4", "INVSQUARE", "CONSTANT", "CUSTOM"):
             ob.vertex_groups["Bone.L"].add(range(len(ob.data.vertices)), 0.0, 'REPLACE')
-            ts.weight_paint.brush.curve_preset = preset
+            set_preset(ts.weight_paint.brush, preset)
             st = make_state(mod, ctx, ob)
             dabs(st, ctx, mod, xy, n=1)
             w = weights(ob, "Bone.L")
             check("preset %-9s one dab paints" % preset, w.max() > 0.5 and w[vi] > 0.5,
                   "centre=%.3f painted=%d" % (w[vi], int((w > 0).sum())))
-        ts.weight_paint.brush.curve_preset = 'SMOOTH'
+        set_preset(ts.weight_paint.brush, 'SMOOTH')
 
         log("== blur")
         ob.vertex_groups["Bone.L"].add(range(len(ob.data.vertices)), 0.0, 'REPLACE')

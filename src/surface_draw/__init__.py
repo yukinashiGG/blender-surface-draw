@@ -219,13 +219,28 @@ def mesh_graph_cached(me, want_mirror):
 # Brush settings (unified settings aware)
 # ==========================================================================
 
+def unified_paint_settings(context):
+    """Unified size/strength/weight settings.
+
+    Up to 4.5 they live on ToolSettings; Blender 5.0 moved them onto each
+    Paint (tool_settings.weight_paint.unified_paint_settings) and dropped
+    the old attribute. Prefer the one the running version's header uses.
+    """
+    ts = context.tool_settings
+    ups = getattr(ts, "unified_paint_settings", None)
+    if ups is None:
+        wp = getattr(ts, "weight_paint", None)
+        ups = getattr(wp, "unified_paint_settings", None)
+    return ups
+
+
 def brush_values(context):
     """Read the active weight paint brush. Falls back to the unified settings
     and plain defaults when no brush is active, so the tool keeps working."""
     ts = context.tool_settings
     wp = ts.weight_paint
     brush = wp.brush if wp else None
-    ups = ts.unified_paint_settings
+    ups = unified_paint_settings(context)
 
     def pick(flag, attr, default):
         if brush is None or getattr(ups, flag, False):
@@ -235,16 +250,30 @@ def brush_values(context):
     size = pick("use_unified_size", "size", 50)
     strength = pick("use_unified_strength", "strength", 1.0)
     weight = pick("use_unified_weight", "weight", 1.0)
+
+    # 5.0 renamed the falloff curve (curve_preset -> curve_distance_falloff_preset,
+    # curve -> curve_distance_falloff) and dropped use_space in favour of
+    # stroke_method; read whichever the running version has.
+    preset = getattr(brush, "curve_distance_falloff_preset", None)
+    if preset is None:
+        preset = getattr(brush, "curve_preset", 'SMOOTH')
+    curve = getattr(brush, "curve_distance_falloff", None)
+    if curve is None:
+        curve = getattr(brush, "curve", None)
+    use_spacing = getattr(brush, "use_space", None)
+    if use_spacing is None:
+        use_spacing = getattr(brush, "stroke_method", 'SPACE') == 'SPACE'
+
     return {
         "brush": brush,
         "size": max(1, int(size)),
         "strength": float(strength),
         "weight": float(weight),
         "blend": getattr(brush, "blend", 'MIX'),
-        "preset": getattr(brush, "curve_preset", 'SMOOTH'),
-        "curve": getattr(brush, "curve", None),
+        "preset": preset,
+        "curve": curve,
         "spacing": float(getattr(brush, "spacing", 10)) / 100.0,
-        "use_spacing": bool(getattr(brush, "use_space", True)),
+        "use_spacing": bool(use_spacing),
         "pressure_strength": bool(getattr(brush, "use_pressure_strength", False)),
         "pressure_size": bool(getattr(brush, "use_pressure_size", False)),
     }
@@ -416,8 +445,13 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
         self.rv3d = context.region_data
         self.area = context.area
 
-        # X mirror follows the header toggle (mesh.use_mirror_x)
-        self.mirror_on = bool(self.use_mirror_x and getattr(me, "use_mirror_x", False))
+        # X mirror follows the header toggle. It is the same flag on the mesh
+        # (mesh.use_mirror_x) and the object (object.use_mesh_mirror_x, which
+        # is what the header draws in 5.x); read whichever exists.
+        mirror_flag = getattr(obj, "use_mesh_mirror_x", None)
+        if mirror_flag is None:
+            mirror_flag = getattr(me, "use_mirror_x", False)
+        self.mirror_on = bool(self.use_mirror_x and mirror_flag)
 
         # Edge graph and mirror table (cached per mesh)
         self.graph, self.mirror = mesh_graph_cached(me, self.mirror_on)
