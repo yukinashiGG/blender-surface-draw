@@ -1,0 +1,164 @@
+# Surface Draw — Geodesic Weight Brush for Blender
+
+A weight paint brush that falls off **along the surface** instead of through
+space. Painting one thigh no longer bleeds into the other; painting an arm no
+longer bleeds into the ribs. Anything that is not edge-connected to the face
+under the cursor is never touched, however close it sits.
+
+日本語は[下](#日本語)にあります。
+
+- Blender **4.2 or later** (verified on 4.5.11 LTS / 4.3.1 / 4.2.23 LTS)
+- Free, GPL-3.0-or-later
+- Works with the standard brush settings and header (weight, radius, strength,
+  pressure, falloff curve, spacing, blend mode, X mirror, auto normalize,
+  face/vertex selection masks)
+
+## Install
+
+1. Download `geodesic_weight_brush_v1_1_0.zip` from
+   [Releases](https://github.com/yukinashiGG/blender-surface-draw/releases).
+2. In Blender: **Edit > Preferences > Get Extensions > ⌄ (top right) > Install
+   from Disk…** and pick the zip. Or just drag the zip into a Blender window.
+3. The tool appears in the **Weight Paint toolbar** as **Surface Draw**, right
+   after the standard brushes.
+
+## Use
+
+| Action | Result |
+|---|---|
+| LMB drag | Paint with the current brush weight / strength / blend |
+| Ctrl + LMB | Invert (Mix → 1 − weight, Add ↔ Subtract, Lighten ↔ Darken) |
+| Shift + LMB | Blur toward edge-connected neighbours |
+| Header **X** | Mirror to the left/right-flipped vertex group |
+
+The header shows the same controls as the standard Draw brush (brush selector,
+Weight, Radius, Strength, Brush / Stroke / Falloff / Cursor). Everything you
+set there is what Surface Draw uses.
+
+**Sidebar (N) > Surface Draw**
+
+- **Start Resident Mode** — keeps the brush running without switching tools.
+  Esc or RMB exits.
+- **Surface Gradient** — takes the vertices that already carry weight as seeds
+  and falls off outward along the surface by a given distance. Handy for
+  making a clean ramp from a hard-painted core.
+
+## How it works
+
+Distance is measured by walking the mesh's edges (Dijkstra, cut off at the
+brush radius), so the falloff follows the geometry. The brush radius on screen
+is converted to a distance on the surface at the point under the cursor.
+
+Blender's stroke handling is in C and only the falloff cannot be swapped, so
+the brush is a modal operator of its own that reads the active brush's settings.
+
+## Limits
+
+- Only the X axis of Symmetry is used (Y / Z are ignored). Topology mirror is
+  not supported; mirrored vertices are matched by position.
+- Weight always accumulates across the stroke (the brush's Accumulate toggle is
+  ignored).
+- Texture masks and Front Faces Only are not applied.
+- Multi-Paint and Lock-Relative display modes are not consulted.
+
+## Changelog
+
+**1.1.0**
+- Header now shows the standard brush controls (brush selector, Weight, Radius,
+  Strength, Brush / Stroke / Falloff / Cursor).
+- Ctrl now reaches exactly 0 / 1. Target-seeking blends left ~1e-6 behind,
+  which the overlay draws as blue rather than black.
+- Ctrl now matches the standard brush per blend mode (Add ↔ Subtract, Lighten
+  ↔ Darken) instead of always inverting the weight.
+- Locked vertex groups are respected (active group refuses to paint; Auto
+  Normalize leaves locked groups alone). Hidden vertices are never painted.
+- Edge graph is cached per mesh instead of rebuilt on every stroke.
+- Falloff presets Smoother and Sphere added.
+- Renamed to Surface Draw; English UI with Japanese translation.
+- Packaged as an extension.
+
+**1.0.0** — first version (single-file add-on).
+
+---
+
+# 日本語
+
+ウェイトペイントの減衰を、空間の直線距離ではなく**面の上を辺づたいに歩いた距離**で
+行うブラシです。太ももを塗っても反対の太ももに乗らず、腕を塗っても脇腹に
+乗りません。カーソル下の面と辺でつながっていない部分は、どれだけ近くても
+一切塗られません。
+
+- Blender **4.2 以降**（4.5.11 LTS / 4.3.1 / 4.2.23 LTS で検証）
+- 無償・GPL-3.0-or-later
+- 標準ブラシの設定とヘッダーをそのまま使います（ウェイト・半径・強さ・筆圧・
+  減衰カーブ・間隔・ブレンド・X ミラー・自動正規化・面/頂点の選択マスク）
+
+## インストール
+
+1. [Releases](https://github.com/yukinashiGG/blender-surface-draw/releases) から
+   `geodesic_weight_brush_v1_1_0.zip` をダウンロード。
+2. Blender の **編集 > プリファレンス > 拡張機能を入手 > 右上の ⌄ > ディスクから
+   インストール…** で zip を選ぶか、zip を Blender のウィンドウにドラッグ＆ドロップ。
+3. **ウェイトペイントのツールバー**に **Surface Draw** が標準ブラシの後ろに出ます。
+
+## 使い方
+
+| 操作 | 結果 |
+|---|---|
+| 左ドラッグ | 現在のブラシのウェイト／強さ／ブレンドで塗る |
+| Ctrl + 左 | 反転（Mix は 1 − ウェイト、Add ↔ Subtract、Lighten ↔ Darken） |
+| Shift + 左 | 辺でつながった隣接頂点の平均へぼかす |
+| ヘッダーの **X** | 名前を左右反転した頂点グループへミラー |
+
+ヘッダーには標準の Draw ブラシと同じ項目（ブラシ選択・Weight・Radius・Strength・
+Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値がそのまま使われます。
+
+**サイドバー (N) > Surface Draw**
+
+- **常駐モードで開始** — ツールを切り替えずにブラシを常駐させます。Esc か
+  右クリックで終了。
+- **Surface Gradient** — いまウェイトが乗っている頂点を種にして、面づたいに
+  指定距離で外へ減衰させます。ベタ塗りした芯からきれいなグラデーションを作るのに。
+
+## 制限
+
+- シンメトリは X 軸のみ（Y / Z は無視）。トポロジーミラー非対応で、鏡像の頂点は
+  座標で探します。
+- ストローク内でウェイトは常に累積します（ブラシの Accumulate は見ません）。
+- テクスチャマスク・Front Faces Only は効きません。
+- マルチペイント・Lock-Relative 表示は考慮しません。
+
+## 更新履歴
+
+**1.1.0**
+- ヘッダーに標準ブラシと同じ項目を表示（ブラシ選択・Weight・Radius・Strength・
+  Brush / Stroke / Falloff / Cursor）。
+- Ctrl で塗った跡が黒（0）にならず青で止まる問題を修正。目標へ寄せるブレンドは
+  1e-6 前後が残り、オーバーレイはちょうど 0 しか黒で描かないため。
+- Ctrl の意味をブレンドモードごとに標準ブラシへ揃えた（Add ↔ Subtract、
+  Lighten ↔ Darken）。
+- ロックした頂点グループを尊重（アクティブがロックなら塗らない。自動正規化は
+  ロック中のグループを触らない）。非表示の頂点は塗らない。
+- 辺グラフをメッシュごとにキャッシュ（ストロークごとの再構築をやめた）。
+- 減衰プリセット Smoother / Sphere に対応。
+- 名前を Surface Draw に変更。UI を英語化し日本語訳を同梱。
+- 拡張機能形式に変更。
+
+**1.0.0** — 初版（単一ファイルのアドオン）。
+
+---
+
+## Development
+
+```
+geodesic_weight_brush/
+  src/geodesic_weight_brush/   the extension (what goes into the zip)
+  dist/                        built zips (..\build.ps1 geodesic_weight_brush)
+  mcp_check.py                 verification harness: run with
+                               blender --factory-startup --python mcp_check.py
+```
+
+The harness builds a test scene, drives the brush's dab routine directly
+(without a real mouse), and checks weights numerically: reaching exact 0 / 1,
+Ctrl per blend mode, locked groups, hidden vertices, selection masks, X
+mirror, auto normalize, Surface Gradient, undo, and clean unregister.

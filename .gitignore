@@ -1,0 +1,9 @@
+# build output goes to GitHub Releases, not the repo
+dist/
+# old single-file version kept locally for reference
+_legacy/
+# harness artifacts
+check_log.txt
+check_ui_*.png
+__pycache__/
+*.pyc
