@@ -16,12 +16,12 @@ import bpy
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PKG = os.path.join(HERE, "src", "geodesic_weight_brush")
+PKG = os.path.join(HERE, "src", "surface_draw")
 # CHECK_OUT lets two Blender versions run at once without sharing files
 HERE = os.environ.get("CHECK_OUT", HERE)
 LOG = os.path.join(HERE, "check_log.txt")
 USE_INSTALLED = os.environ.get("USE_INSTALLED") == "1"
-INSTALLED_MODULE = "bl_ext.user_default.geodesic_weight_brush"
+INSTALLED_MODULE = "bl_ext.user_default.surface_draw"
 
 _lines = []
 _fails = 0
@@ -50,10 +50,10 @@ def load_module():
         addon_utils.enable(INSTALLED_MODULE, default_set=True)
         return sys.modules[INSTALLED_MODULE]
     spec = importlib.util.spec_from_file_location(
-        "geodesic_weight_brush", os.path.join(PKG, "__init__.py"),
+        "surface_draw", os.path.join(PKG, "__init__.py"),
         submodule_search_locations=[PKG])
     mod = importlib.util.module_from_spec(spec)
-    sys.modules["geodesic_weight_brush"] = mod
+    sys.modules["surface_draw"] = mod
     spec.loader.exec_module(mod)
     mod.register()
     return mod

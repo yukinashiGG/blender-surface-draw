@@ -1,9 +1,9 @@
 # Surface Draw — Geodesic Weight Brush for Blender
 
 A weight paint brush that falls off **along the surface** instead of through
-space. Painting one thigh no longer bleeds into the other; painting an arm no
-longer bleeds into the ribs. Anything that is not edge-connected to the face
-under the cursor is never touched, however close it sits.
+space — handy for weighting fingers and strands of hair. Painting one finger
+no longer bleeds into the next; anything that is not edge-connected to the
+face under the cursor is never touched, however close it sits.
 
 日本語は[下](#日本語)にあります。
 
@@ -15,7 +15,7 @@ under the cursor is never touched, however close it sits.
 
 ## Install
 
-1. Download `geodesic_weight_brush_v1_1_0.zip` from
+1. Download `surface_draw_v1_1_0.zip` from
    [Releases](https://github.com/yukinashiGG/blender-surface-draw/releases).
 2. In Blender: **Edit > Preferences > Get Extensions > ⌄ (top right) > Install
    from Disk…** and pick the zip. Or just drag the zip into a Blender window.
@@ -83,10 +83,9 @@ the brush is a modal operator of its own that reads the active brush's settings.
 
 # 日本語
 
-ウェイトペイントの減衰を、空間の直線距離ではなく**面の上を辺づたいに歩いた距離**で
-行うブラシです。太ももを塗っても反対の太ももに乗らず、腕を塗っても脇腹に
-乗りません。カーソル下の面と辺でつながっていない部分は、どれだけ近くても
-一切塗られません。
+面の上を辺づたいの距離で減衰するウェイトブラシです。指や髪の房のウェイト塗りに
+便利です。隣の指を塗っても反対の指に乗らず、カーソル下の面と辺でつながっていない
+部分は、どれだけ近くても一切塗られません。
 
 - Blender **4.2 以降**（4.5.11 LTS / 4.3.1 / 4.2.23 LTS で検証）
 - 無償・GPL-3.0-or-later
@@ -96,7 +95,7 @@ the brush is a modal operator of its own that reads the active brush's settings.
 ## インストール
 
 1. [Releases](https://github.com/yukinashiGG/blender-surface-draw/releases) から
-   `geodesic_weight_brush_v1_1_0.zip` をダウンロード。
+   `surface_draw_v1_1_0.zip` をダウンロード。
 2. Blender の **編集 > プリファレンス > 拡張機能を入手 > 右上の ⌄ > ディスクから
    インストール…** で zip を選ぶか、zip を Blender のウィンドウにドラッグ＆ドロップ。
 3. **ウェイトペイントのツールバー**に **Surface Draw** が標準ブラシの後ろに出ます。
@@ -151,11 +150,11 @@ Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値が�
 ## Development
 
 ```
-geodesic_weight_brush/
-  src/geodesic_weight_brush/   the extension (what goes into the zip)
-  dist/                        built zips (..\build.ps1 geodesic_weight_brush)
-  mcp_check.py                 verification harness: run with
-                               blender --factory-startup --python mcp_check.py
+blender-surface-draw/
+  src/surface_draw/   the extension (what goes into the zip; id = surface_draw)
+  dist/               built zips, e.g. surface_draw_v1_1_0.zip (not committed)
+  mcp_check.py        verification harness: run with
+                      blender --factory-startup --python mcp_check.py
 ```
 
 The harness builds a test scene, drives the brush's dab routine directly
