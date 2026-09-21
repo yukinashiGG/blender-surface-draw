@@ -323,6 +323,22 @@ def run():
               "brush=%s" % (ts.weight_paint.brush.name if ts.weight_paint.brush else None))
         check("operator poll in weight paint", bpy.ops.paint.geodesic_weight_brush.poll())
 
+        log("== icon")
+        icon_path = mod.ICON_FILE + ".dat"
+        check("bundled icon file present", os.path.isfile(icon_path), icon_path)
+        check("tool points at bundled icon", mod.GeodesicWeightTool.bl_icon == mod.ICON_FILE,
+              "bl_icon=%s" % mod.GeodesicWeightTool.bl_icon)
+        # what the toolbar does with bl_icon; a missing/corrupt file silently
+        # falls back to the "none" icon, which is what this catches
+        icon_value = ToolSelectPanelHelper._icon_value_from_icon_handle(mod.GeodesicWeightTool.bl_icon)
+        none_value = ToolSelectPanelHelper._icon_value_from_icon_handle("none")
+        check("toolbar resolves the icon (not the 'none' fallback)",
+              icon_value > 0 and icon_value != none_value,
+              "icon_value=%s none=%s" % (icon_value, none_value))
+        with open(icon_path, "rb") as f:
+            head = f.read(8)
+        check("icon file has the VCO header", head[:4] == b"VCO\x00", repr(head))
+
         log("== translation")
         prefs = ctx.preferences.view
         old_lang = prefs.language

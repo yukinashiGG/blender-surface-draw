@@ -37,13 +37,13 @@ Usage:
 Packaged as an extension. bl_info is kept only so the build script can read
 the version from one more place; blender_manifest.toml must agree with it.
 
-Verified on Blender 4.5 LTS.
+Verified on Blender 5.2.2 LTS, 4.5.11 LTS, 4.3.1 and 4.2.23 LTS.
 """
 
 bl_info = {
     "name": "Surface Draw (Geodesic Weight Brush)",
     "author": "Yukinashi",
-    "version": (1, 1, 0),
+    "version": (1, 1, 1),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Weight Paint > Toolbar / Sidebar > Surface Draw",
     "description": "Weight paint brush that falls off along the surface, "
@@ -52,6 +52,7 @@ bl_info = {
 }
 
 import math
+import os
 import heapq
 
 import bpy
@@ -1091,13 +1092,29 @@ class GeodesicWeightTool(bpy.types.WorkSpaceTool):
     # No draw_settings: Blender draws the brush header itself (see above).
 
 
+# Our own toolbar icon (tools/make_icon.py writes it). The toolbar resolves
+# bl_icon as os.path.join(<datafiles>/icons, bl_icon + ".dat"), and join()
+# discards its first part when the second is absolute, so an absolute path
+# without the extension loads a file shipped with the extension.
+ICON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "surface_draw_icon")
+
+
 def _pick_icon():
-    """Choose an icon that exists; a missing one leaves the button blank."""
-    import os
+    """Our icon if it is there and loads; otherwise a built-in one that
+    exists - a missing one leaves the button blank."""
+    if os.path.isfile(ICON_FILE + ".dat"):
+        try:
+            # same call the toolbar makes; a corrupt file raises here
+            bpy.app.icons.release(bpy.app.icons.new_triangles_from_file(ICON_FILE + ".dat"))
+            return ICON_FILE
+        except Exception as exc:
+            print("[Surface Draw] bundled icon not usable:", exc)
     try:
         root = bpy.utils.system_resource('DATAFILES', path="icons")
     except Exception:
         return GeodesicWeightTool.bl_icon
+    # 4.3+ has no brush.paint_weight.draw (the Draw brush moved into
+    # brush.generic), so without our own file this ends up as the gradient icon
     for name in ("brush.paint_weight.draw",
                  "ops.paint.weight_gradient",
                  "brush.paint_texture.draw",
