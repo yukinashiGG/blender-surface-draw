@@ -29,10 +29,10 @@ weight paint brush, and the header shows the same controls as the standard
 brush, so it behaves like one.
 
 Usage:
-    (1) Pick "Surface Weight Paint" in the toolbar (left column) in Weight Paint mode.
-        LMB drag paints, Ctrl+LMB inverts, Shift+LMB blurs - same as Draw.
-    (2) Sidebar (N) > Surface Weight Paint > "Start Resident Mode" keeps the brush
-        running without switching tools; Esc or RMB leaves it.
+    Pick "Surface Weight Paint" in the toolbar (left column) in Weight Paint
+    mode. LMB drag paints, Ctrl+LMB inverts, Shift+LMB blurs - same as Draw.
+    Sidebar (N) > Surface Weight Paint holds "Surface Gradient", which grows
+    a falloff outward from the already painted area.
 
 Packaged as an extension. bl_info is kept only so the build script can read
 the version from one more place; blender_manifest.toml must agree with it.
@@ -43,7 +43,7 @@ Verified on Blender 5.2.2 LTS, 4.5.11 LTS, 4.3.1 and 4.2.23 LTS.
 bl_info = {
     "name": "Surface Weight Paint (Geodesic Weight Brush)",
     "author": "Yukinashi",
-    "version": (1, 1, 3),
+    "version": (1, 1, 4),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Weight Paint > Toolbar / Sidebar > Surface Weight Paint",
     "description": "Weight paint brush that falls off along the surface, "
@@ -388,7 +388,9 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
     bl_description = ("Weight brush that falls off along the surface. "
                       "Faces that are not connected are never painted, "
                       "however close they are")
-    bl_options = {'REGISTER'}
+    # INTERNAL: only meaningful as a stroke from the tool keymap, so keep it
+    # out of the operator search
+    bl_options = {'REGISTER', 'INTERNAL'}
 
     radius_scale: FloatProperty(
         name="Radius Scale",
@@ -402,11 +404,10 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
                     "result, written to the left/right-flipped group",
         default=True,
     )
-    # SKIP_SAVE: these two are rewritten while the brush runs (Ctrl/Shift in
-    # resident mode). Without it Blender keeps the operator's last values and
-    # feeds them to the next non-keymap invocation - so after a Shift stroke
-    # in resident mode, pressing "Start Resident Mode" again started in blur
-    # mode and plain strokes did nothing (issue #1).
+    # SKIP_SAVE: invoke() rewrites these from the modifiers. Without it
+    # Blender keeps the operator's last values and feeds them to the next
+    # invocation that does not set them itself (a button, a Python call) -
+    # that is how the old resident mode got stuck in blur mode (issue #1).
     invert: BoolProperty(
         name="Invert",
         description="Invert the brush (same as Ctrl+drag)",
@@ -496,41 +497,27 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
         self.use_evaluated = (len(ev.data.vertices) == len(me.vertices)
                               and len(ev.data.polygons) == len(me.polygons))
 
-        # Invoked from the toolbar tool: one stroke, ends on release.
-        # Invoked from the button: stays resident until Esc.
-        self.stroke_mode = (event.type == 'LEFTMOUSE' and event.value == 'PRESS')
+        # One stroke: starts on the press that invoked us, ends on release.
+        if not (event.type == 'LEFTMOUSE' and event.value == 'PRESS'):
+            self.report({'ERROR'}, iface_("Surface Weight Paint is a brush stroke: "
+                                          "pick the tool in the toolbar and drag"))
+            return {'CANCELLED'}
 
-        # Base values come only from what the caller set explicitly (the
-        # toolbar keymap items do; the sidebar button does not). Anything
-        # Blender carried over from a previous run is not "set" and is ignored.
+        # Ctrl / Shift come from the keymap item that matched, or from the
+        # modifiers held at the click. Only values the caller set explicitly
+        # count; anything Blender carried over from a previous run is not
+        # "set" and is ignored.
         props = self.properties
-        self._base_invert = bool(self.invert) if props.is_property_set("invert") else False
-        self._base_smooth = bool(self.smooth) if props.is_property_set("smooth") else False
-        # In stroke mode the modifiers held at the click decide; in resident
-        # mode they are read again at every press (see modal()).
-        self.invert = self._base_invert or (self.stroke_mode and event.ctrl)
-        self.smooth = self._base_smooth or (self.stroke_mode and event.shift)
+        self.invert = (bool(self.invert) if props.is_property_set("invert") else False) or event.ctrl
+        self.smooth = (bool(self.smooth) if props.is_property_set("smooth") else False) or event.shift
 
-        self.painting = False
         self.last_px = None
-        self.mouse = (event.mouse_region_x, event.mouse_region_y)
-        self.px_radius = brush_values(context)["size"]
         self.dabs = 0
         self.touched = 0
-        self._handle = None
 
-        if self.stroke_mode:
-            # The tool's draw_cursor draws the circle, nothing to add here
-            self.painting = True
-            if not self._safe_dab(context, event, brush_values(context)):
-                return {'CANCELLED'}
-        else:
-            self._handle = bpy.types.SpaceView3D.draw_handler_add(
-                self._draw_cursor, (context,), 'WINDOW', 'POST_PIXEL')
-            self.area.header_text_set(iface_(
-                "Surface Weight Paint - LMB: paint / Ctrl+LMB: invert / "
-                "Shift+LMB: blur / Esc, RMB: exit"))
-            context.window.cursor_modal_set('PAINT_BRUSH')
+        # The tool's draw_cursor draws the brush circle, nothing to add here
+        if not self._safe_dab(context, event, brush_values(context)):
+            return {'CANCELLED'}
 
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -541,7 +528,7 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
             return self._finish(context)
 
         # Anything that pulls the rug out - mode change, object switched or
-        # deleted, file reloaded - ends the brush instead of erroring later.
+        # deleted, file reloaded - ends the stroke instead of erroring later.
         try:
             alive = (context.mode == 'PAINT_WEIGHT'
                      and context.active_object == self.obj
@@ -551,32 +538,12 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
         if not alive:
             return self._finish(context)
 
-        self.mouse = (event.mouse_region_x, event.mouse_region_y)
-        bv = brush_values(context)
-        self.px_radius = bv["size"]
-
-        if event.type == 'LEFTMOUSE':
-            if event.value == 'PRESS':
-                self.painting = True
-                self.invert = self._base_invert or event.ctrl
-                self.smooth = self._base_smooth or event.shift
-                self.last_px = None
-                if not self._safe_dab(context, event, bv):
-                    return self._finish(context)
-                return {'RUNNING_MODAL'}
-            if event.value == 'RELEASE':
-                if self.painting:
-                    self.painting = False
-                    if self.dabs:
-                        bpy.ops.ed.undo_push(message="Surface Weight Paint")
-                if self.stroke_mode:
-                    return self._finish(context)
-                return {'RUNNING_MODAL'}
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            return self._finish(context)
 
         if event.type == 'MOUSEMOVE':
-            if self.painting:
-                if not self._safe_dab(context, event, bv):
-                    return self._finish(context)
+            if not self._safe_dab(context, event, brush_values(context)):
+                return self._finish(context)
             self.area.tag_redraw()
             return {'RUNNING_MODAL'}
 
@@ -585,8 +552,8 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
 
     # ------------------------------------------------------------------
     def _safe_dab(self, context, event, bv):
-        """Run one dab; on any error report it and say so instead of leaving
-        the modal handler half-dead with the header text and cursor changed."""
+        """Run one dab; on any error report it and end the stroke instead of
+        leaving a half-dead modal handler behind."""
         try:
             self._dab(context, event, bv)
             return True
@@ -595,23 +562,7 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
             return False
 
     def _finish(self, context):
-        if self._handle is not None:
-            try:
-                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-            except Exception:
-                pass
-            self._handle = None
-        if not self.stroke_mode:
-            try:
-                self.area.header_text_set(None)
-            except Exception:
-                pass
-            context.window.cursor_modal_restore()
-            self.report({'INFO'},
-                        iface_("Surface Weight Paint finished: %d dabs, %d vertex writes")
-                        % (self.dabs, self.touched))
-        elif self.painting and self.dabs:
-            # Stroke cut short by a mode change etc. - still one undo step
+        if self.dabs:
             bpy.ops.ed.undo_push(message="Surface Weight Paint")
         try:
             self.area.tag_redraw()
@@ -664,8 +615,8 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
                 g.weight = w
                 return
         # Look the group up by index every time: a VertexGroup reference held
-        # across an undo (possible in resident mode) points at freed memory
-        # and is not invalidated the way ID references are.
+        # across an undo points at freed memory and is not invalidated the
+        # way ID references are.
         # VertexGroup.add() rejects numpy.int64 (comes in via the mirror table)
         self.obj.vertex_groups[gidx].add((int(vi),), w, 'REPLACE')
 
@@ -840,15 +791,6 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
         obj.update_tag()
         self.area.tag_redraw()
 
-    # ------------------------------------------------------------------
-    # Cursor circle (resident mode only; the tool draws its own)
-    # ------------------------------------------------------------------
-    def _draw_cursor(self, context):
-        if context.region != self.region:
-            return
-        color = (1.0, 0.35, 0.35, 0.9) if self.painting else (1.0, 1.0, 1.0, 0.65)
-        _draw_circle_px(self.mouse[0], self.mouse[1], self.px_radius, color)
-
 
 # ==========================================================================
 # Surface Gradient - grow from the painted area in one go
@@ -984,29 +926,13 @@ class VIEW3D_PT_geodesic_weight(bpy.types.Panel):
         layout = self.layout
         obj = context.active_object
 
-        box0 = layout.box()
-        box0.label(text="Brush is in the toolbar", icon='TOOL_SETTINGS')
-
-        col = layout.column(align=True)
-        col.scale_y = 1.4
-        col.operator("paint.geodesic_weight_brush",
-                     text="Start Resident Mode", icon='BRUSH_DATA')
-        col.enabled = (context.mode == 'PAINT_WEIGHT')
-
-        box = layout.box()
-        box.label(text="Uses the standard brush settings", icon='INFO')
-        bv = brush_values(context)
-        row = box.row(align=True)
-        row.label(text=iface_("Radius %d px") % bv["size"])
-        row.label(text=iface_("Strength %.2f") % bv["strength"])
-        row = box.row(align=True)
-        row.label(text=iface_("Weight %.2f") % bv["weight"])
-        row.label(text=bv["blend"])
-
-        layout.separator()
+        # The brush itself lives in the toolbar; this panel holds the one-shot
+        # operator that has no place there.
         layout.label(text="Grow from the painted area")
-        layout.operator("paint.geodesic_weight_spread",
-                        text="Surface Gradient", icon='MOD_SMOOTH')
+        col = layout.column(align=True)
+        col.scale_y = 1.3
+        col.operator("paint.geodesic_weight_spread",
+                     text="Surface Gradient", icon='MOD_SMOOTH')
 
         if obj and obj.type == 'MESH' and obj.vertex_groups.active:
             vg = obj.vertex_groups.active
@@ -1200,11 +1126,9 @@ _JA = {
         "ミラー先のグループ '%s' がロックされているのでミラーは行いません",
     "Run this in a 3D Viewport": "3D ビューで実行してください",
     "Created vertex group %s": "頂点グループ %s を作成しました",
-    "Surface Weight Paint - LMB: paint / Ctrl+LMB: invert / Shift+LMB: blur / Esc, RMB: exit":
-        "Surface Weight Paint — 左:塗る / Ctrl+左:反転 / Shift+左:ぼかし / Esc・右クリック:終了",
+    "Surface Weight Paint is a brush stroke: pick the tool in the toolbar and drag":
+        "Surface Weight Paint はブラシのストロークです。ツールバーでツールを選んでドラッグしてください",
     "Surface Weight Paint stopped: %s": "Surface Weight Paint を中断しました: %s",
-    "Surface Weight Paint finished: %d dabs, %d vertex writes":
-        "Surface Weight Paint 終了  打点 %d 回 / 延べ %d 頂点",
     # gradient
     "Start from the vertices at or above Seed Threshold and fall off "
     "outward along the surface":
@@ -1227,12 +1151,6 @@ _JA = {
         "種が見つかりません。しきい値以上のウェイトを塗ってから実行してください",
     "Updated %d vertices (%d reached)": "%d 頂点を更新（到達 %d 頂点）",
     # panel
-    "Brush is in the toolbar": "本体はツールバーにあります",
-    "Start Resident Mode": "常駐モードで開始",
-    "Uses the standard brush settings": "ブラシ設定は標準のものを使います",
-    "Radius %d px": "半径 %d px",
-    "Strength %.2f": "強さ %.2f",
-    "Weight %.2f": "ウェイト %.2f",
     "Grow from the painted area": "塗った範囲から広げる",
     "Target: %s": "対象: %s",
 }

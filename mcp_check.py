@@ -346,15 +346,15 @@ def run():
             prefs.language = 'ja_JP'
             prefs.use_translate_interface = True
             prefs.use_translate_tooltips = True
-            ja = bpy.app.translations.pgettext_iface("Start Resident Mode")
-            check("ja_JP label", ja == "常駐モードで開始", repr(ja))
-            ja2 = bpy.app.translations.pgettext_iface("Radius %d px") % 7
-            check("ja_JP formatted label", ja2 == "半径 7 px", repr(ja2))
+            ja = bpy.app.translations.pgettext_iface("Grow from the painted area")
+            check("ja_JP label", ja == "塗った範囲から広げる", repr(ja))
+            ja2 = bpy.app.translations.pgettext_iface("Updated %d vertices (%d reached)") % (7, 9)
+            check("ja_JP formatted report", ja2 == "7 頂点を更新（到達 9 頂点）", repr(ja2))
             jt = bpy.app.translations.pgettext_tip("Invert the brush (same as Ctrl+drag)")
             check("ja_JP tooltip", jt == "ブラシを反転する（Ctrl+ドラッグ相当）", repr(jt))
             prefs.language = 'en_US'
-            en = bpy.app.translations.pgettext_iface("Start Resident Mode")
-            check("en_US label unchanged", en == "Start Resident Mode", repr(en))
+            en = bpy.app.translations.pgettext_iface("Grow from the painted area")
+            check("en_US label unchanged", en == "Grow from the painted area", repr(en))
         finally:
             prefs.language = old_lang
 
@@ -487,6 +487,19 @@ def run():
         ob.vertex_groups["Bone.L"].lock_weight = False
         ob.vertex_groups.active_index = ob.vertex_groups["Bone.L"].index
 
+        log("== invoked without a mouse press (search, script, button)")
+        try:
+            res = bpy.ops.paint.geodesic_weight_brush('INVOKE_DEFAULT')
+            msg = str(res)
+        except RuntimeError as exc:
+            res = {'CANCELLED'}
+            msg = str(exc).strip()
+        check("invoke without LMB press is CANCELLED with a hint", res == {'CANCELLED'} and "toolbar" in msg, msg)
+        check("no modal operator left running",
+              not any(op.bl_idname == "PAINT_OT_geodesic_weight_brush" for op in win.modal_operators))
+        check("operator hidden from search (INTERNAL)",
+              'INTERNAL' in mod.PAINT_OT_geodesic_weight_brush.bl_options)
+
         log("== Surface Gradient")
         ob.vertex_groups["Bone.L"].add(range(len(me.vertices)), 0.0, 'REPLACE')
         core = [i for i in range(len(co)) if co[i, 2] > 0.8]
@@ -535,8 +548,7 @@ def run():
         ts = ctx.tool_settings
         back = weights(ob, "Bone.L")[vi]
         check("undo restores the weight", after == 1.0 and back == 0.25, "after=%r undone=%r" % (after, back))
-        # the resident brush must survive an undo under it: a dab after undo
-        # must not crash, and must either paint or end cleanly
+        # a stroke right after an undo must not crash and must paint
         st = make_state(mod, ctx, ob)
         dabs(st, ctx, mod, xy, n=3)
         check("painting after undo works", weights(ob, "Bone.L")[vi] > 0.25, "centre=%.3f" % weights(ob, "Bone.L")[vi])

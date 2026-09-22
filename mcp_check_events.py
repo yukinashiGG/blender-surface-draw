@@ -1,5 +1,5 @@
 """Event-driven checks for Surface Weight Paint: real strokes through the
-tool keymap and the resident mode, driven with simulated input.
+tool keymap, driven with simulated input.
 
     blender --factory-startup --enable-event-simulate --window-geometry 0 0 1800 950 --python mcp_check_events.py
 
@@ -9,10 +9,12 @@ dab routine directly; this one covers what only the real operator path can
 show - how Blender invokes the operator, what it carries over between runs,
 and what the modal does with modifiers, Esc and undo.
 
-Regression for issue #1: in resident mode a Shift (blur) stroke set the
-operator's `smooth` property, Blender stored it as the operator's last-used
-value, and the next "Start Resident Mode" inherited it - every stroke was a
-blur and looked like the brush could not paint.
+Regression for issue #1: a Shift (blur) stroke sets the operator's `smooth`
+property; Blender stores an operator's properties as its last-used values
+and hands them to the next invocation that does not set them itself. The
+(since removed) resident-mode button inherited them and started in blur
+mode. The flags are SKIP_SAVE now; the check here is that an invocation
+without keymap properties, right after a Shift stroke, sees smooth=False.
 
 Env: SRC (package folder, default src/surface_weight_paint), CHECK_OUT
 (where check_events_log.txt goes, default next to this file).
@@ -167,14 +169,19 @@ def key(k, rxy, shift=False, ctrl=False):
     yield 0.3
 
 
-def resident_start():
-    # The sidebar button calls the operator this way; undo=True keeps
-    # Blender's last-used-properties bookkeeping on, exactly as for a click.
+def invoke_without_press():
+    """Call the operator the way a button or a script would (no mouse press,
+    no keymap properties). undo=True keeps Blender's last-used-properties
+    bookkeeping on, exactly as for a real button click."""
     with override():
-        bpy.ops.paint.geodesic_weight_brush('INVOKE_DEFAULT', True)
+        try:
+            res = bpy.ops.paint.geodesic_weight_brush('INVOKE_DEFAULT', True)
+            return res, str(res)
+        except RuntimeError as exc:
+            return {'CANCELLED'}, str(exc).strip()
 
 
-def resident_running():
+def stroke_running():
     return any(op.bl_idname == "PAINT_OT_geodesic_weight_brush" for op in G["win"].modal_operators)
 
 
@@ -207,49 +214,22 @@ def steps():
     yield from stroke(C)
     check("plain stroke after Ctrl stroke paints", w(vC) == 1.0, "C=%.3f" % w(vC))
 
-    log("== resident mode")
-    reset()
-    resident_start()
-    yield 0.3
-    check("resident session running", resident_running())
-    yield from stroke(A)
-    check("resident: plain stroke paints", w(vA) == 1.0, "A=%.3f" % w(vA))
-    yield from stroke(A, shift=True)
-    check("resident: Shift stroke blurs", 0.0 < w(vA) < 1.0, "A=%.3f" % w(vA))
-    yield from stroke(C)
-    check("resident: plain stroke after Shift paints", w(vC) == 1.0, "C=%.3f" % w(vC))
-    yield from key('ESC', C)
-    check("Esc ends the session", not resident_running())
+    check("stroke ends on release (no modal left)", not stroke_running())
 
-    log("== issue #1: second resident session after a blur in the first")
+    log("== issue #1: invocation without keymap properties after a Shift stroke")
     reset()
-    resident_start()
-    yield 0.3
-    yield from stroke(A)
     yield from stroke(A, shift=True)
-    yield from key('ESC', A)
-    resident_start()
-    yield 0.3
-    check("second session starts with smooth=False", G["last_invoke"][0] is False, repr(G["last_invoke"]))
+    res, msg = invoke_without_press()
+    check("last-used blur flag is not carried over", G["last_invoke"][0] is False, repr(G["last_invoke"]))
+    check("invocation without a mouse press is refused with a hint",
+          res == {'CANCELLED'} and "toolbar" in msg, msg)
+    check("nothing left running", not stroke_running())
+    yield 0.2
     yield from stroke(C)
-    check("second session: plain stroke paints (issue #1)", w(vC) == 1.0, "C=%.3f" % w(vC))
-    yield from stroke(C, shift=True)
-    check("second session: Shift still blurs", w(vC) < 1.0, "C=%.3f" % w(vC))
-    yield from key('ESC', C)
-
-    log("== resident -> toolbar")
-    reset()
-    resident_start()
-    yield 0.3
-    yield from stroke(A, shift=True)
-    yield from key('ESC', A)
-    yield from stroke(C)
-    check("toolbar stroke after resident blur paints", w(vC) == 1.0, "C=%.3f" % w(vC))
+    check("next toolbar stroke paints", w(vC) == 1.0, "C=%.3f" % w(vC))
 
     log("== Esc in the middle of a Shift stroke")
     reset()
-    resident_start()
-    yield 0.3
     yield from stroke(A)
     ev('LEFTMOUSE', 'PRESS', A, shift=True)
     yield 0.1
@@ -261,25 +241,20 @@ def steps():
     yield 0.1
     ev('ESC', 'RELEASE', (A[0] + 20, A[1]))
     yield 0.3
-    check("session ended by Esc mid-stroke", not resident_running())
+    check("stroke ended by Esc", not stroke_running())
     yield from stroke(C)
     check("toolbar stroke afterwards paints", w(vC) == 1.0, "C=%.3f" % w(vC))
 
-    log("== undo in resident mode")
+    log("== undo between strokes")
     reset()
-    resident_start()
-    yield 0.3
     yield from stroke(A)
     before = w(vA)
     yield from key('Z', A, ctrl=True)
     after_undo = w(vA)
     yield from stroke(C)
-    log("   A before undo=%.3f after=%.3f | C after painting=%.3f | session running=%s"
-        % (before, after_undo, w(vC), resident_running()))
-    check("Ctrl+Z inside resident mode undoes the stroke", after_undo < before, "A %.3f -> %.3f" % (before, after_undo))
+    log("   A before undo=%.3f after=%.3f | C after painting=%.3f" % (before, after_undo, w(vC)))
+    check("Ctrl+Z undoes the stroke", after_undo < before, "A %.3f -> %.3f" % (before, after_undo))
     check("painting still works after undo", w(vC) == 1.0, "C=%.3f" % w(vC))
-    if resident_running():
-        yield from key('ESC', C)
 
     log("== done: %d failure(s)" % _fails)
     mod.unregister()

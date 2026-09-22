@@ -15,7 +15,7 @@ face under the cursor is never touched, however close it sits.
 
 ## Install
 
-1. Download `surface_weight_paint_v1_1_3.zip` from
+1. Download `surface_weight_paint_v1_1_4.zip` from
    [Releases](https://github.com/yukinashiGG/blender-surface-weight-paint/releases).
 2. In Blender: **Edit > Preferences > Get Extensions > ⌄ (top right) > Install
    from Disk…** and pick the zip. Or just drag the zip into a Blender window.
@@ -37,8 +37,6 @@ set there is what Surface Weight Paint uses.
 
 **Sidebar (N) > Surface Weight Paint**
 
-- **Start Resident Mode** — keeps the brush running without switching tools.
-  Esc or RMB exits.
 - **Surface Gradient** — starts from the vertices at or above Seed Threshold
   (fully weighted by default) and falls off outward along the surface over the
   given distance. Paint the core solid, then let this make the ramp.
@@ -63,6 +61,13 @@ brush's settings.
 - Multi-Paint and Lock-Relative display modes are not consulted.
 
 ## Changelog
+
+**1.1.4**
+- Removed **Start Resident Mode** from the sidebar. It predates the toolbar
+  tool, which does everything it did with Blender's own header, cursor and
+  undo handling, and it was the only place the #1 class of bug could occur.
+  The sidebar now holds Surface Gradient only. The brush operator is hidden
+  from the operator search and refuses to run without a mouse press.
 
 **1.1.3**
 - Fix: after a Shift (blur) stroke in resident mode, the next **Start Resident
@@ -118,7 +123,7 @@ brush's settings.
 ## インストール
 
 1. [Releases](https://github.com/yukinashiGG/blender-surface-weight-paint/releases) から
-   `surface_weight_paint_v1_1_3.zip` をダウンロード。
+   `surface_weight_paint_v1_1_4.zip` をダウンロード。
 2. Blender の **編集 > プリファレンス > 拡張機能を入手 > 右上の ⌄ > ディスクから
    インストール…** で zip を選ぶか、zip を Blender のウィンドウにドラッグ＆ドロップ。
 3. **ウェイトペイントのツールバー**の、標準ブラシのすぐ下に **Surface Weight Paint** が並びます。
@@ -137,8 +142,6 @@ Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値が�
 
 **サイドバー (N) > Surface Weight Paint**
 
-- **常駐モードで開始** — ツールを切り替えずにブラシを常駐させます。Esc か
-  右クリックで終了。
 - **Surface Gradient** — しきい値以上のウェイトが乗っている頂点（既定では 1.0 の
   部分）を種にして、そこから面づたいに指定した距離まで減衰させます。芯だけベタ塗り
   しておけば、周りのグラデーションはこれで作れます。
@@ -152,6 +155,13 @@ Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値が�
 - マルチペイント・Lock-Relative 表示は考慮しません。
 
 ## 更新履歴
+
+**1.1.4**
+- サイドバーの「常駐モードで開始」を削除。ツールバーのツールができる前の
+  起動方法で、ツールバー側はヘッダー・カーソル・Undo を Blender 本体に任せられる
+  上位互換。#1 の種類のバグが起きうる唯一の経路でもあった。サイドバーは
+  Surface Gradient だけになる。ブラシのオペレーターはオペレーター検索から隠し、
+  マウスの押下なしで呼ばれた場合は案内を出して中止する。
 
 **1.1.3**
 - 修正: 常駐モードで Shift（ぼかし）を使ったあと、もう一度「常駐モードで開始」
@@ -202,10 +212,10 @@ blender-surface-weight-paint/
                       surface_weight_paint_icon.dat is the toolbar icon (VCO triangle
                       format, same as Blender's own); tools/make_icon.py writes it
   tools/make_icon.py  icon generator (--preview mocks the toolbar as a PNG)
-  dist/               built zips, e.g. surface_weight_paint_v1_1_3.zip (not committed)
+  dist/               built zips, e.g. surface_weight_paint_v1_1_4.zip (not committed)
   mcp_check.py        verification harness: run with
                       blender --factory-startup --python mcp_check.py
-  mcp_check_events.py strokes through the real keymap / resident mode: run with
+  mcp_check_events.py strokes through the real keymap: run with
                       blender --factory-startup --enable-event-simulate --python mcp_check_events.py
 ```
 
@@ -215,6 +225,7 @@ Ctrl per blend mode, locked groups, hidden vertices, selection masks, X
 mirror, auto normalize, Surface Gradient, undo, and clean unregister.
 
 `mcp_check_events.py` feeds simulated mouse and key events to the window, so
-the operator is invoked the way a user invokes it: toolbar keymap items, the
-resident mode button, Shift / Ctrl, Esc mid-stroke, Ctrl+Z, and a second
-resident session after a blur (issue #1).
+the operator is invoked the way a user invokes it: toolbar keymap items,
+Shift / Ctrl, Esc mid-stroke, Ctrl+Z, and an invocation without keymap
+properties right after a Shift stroke (the last-used-properties leak behind
+issue #1).
