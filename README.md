@@ -15,7 +15,7 @@ face under the cursor is never touched, however close it sits.
 
 ## Install
 
-1. Download `surface_weight_paint_v1_1_2.zip` from
+1. Download `surface_weight_paint_v1_1_3.zip` from
    [Releases](https://github.com/yukinashiGG/blender-surface-weight-paint/releases).
 2. In Blender: **Edit > Preferences > Get Extensions > ⌄ (top right) > Install
    from Disk…** and pick the zip. Or just drag the zip into a Blender window.
@@ -64,6 +64,15 @@ brush's settings.
 
 ## Changelog
 
+**1.1.3**
+- Fix: after a Shift (blur) stroke in resident mode, the next **Start Resident
+  Mode** began in blur mode, so plain strokes did almost nothing ([#1](https://github.com/yukinashiGG/blender-surface-weight-paint/issues/1)).
+  Blender remembers an operator's last-used properties and hands them to the
+  next button invocation; the blur flag is now excluded from that, and the
+  toolbar items set both flags explicitly.
+- `mcp_check_events.py`: strokes driven through the real keymap and the
+  resident mode with simulated input (needs `--enable-event-simulate`).
+
 **1.1.2**
 - Renamed to **Surface Weight Paint** (was Surface Draw): tool, sidebar tab,
   extension id (`surface_weight_paint`) and repository. If you installed
@@ -109,7 +118,7 @@ brush's settings.
 ## インストール
 
 1. [Releases](https://github.com/yukinashiGG/blender-surface-weight-paint/releases) から
-   `surface_weight_paint_v1_1_2.zip` をダウンロード。
+   `surface_weight_paint_v1_1_3.zip` をダウンロード。
 2. Blender の **編集 > プリファレンス > 拡張機能を入手 > 右上の ⌄ > ディスクから
    インストール…** で zip を選ぶか、zip を Blender のウィンドウにドラッグ＆ドロップ。
 3. **ウェイトペイントのツールバー**の、標準ブラシのすぐ下に **Surface Weight Paint** が並びます。
@@ -143,6 +152,16 @@ Brush / Stroke / Falloff / Cursor）が出ます。そこで設定した値が�
 - マルチペイント・Lock-Relative 表示は考慮しません。
 
 ## 更新履歴
+
+**1.1.3**
+- 修正: 常駐モードで Shift（ぼかし）を使ったあと、もう一度「常駐モードで開始」
+  すると、ぼかしモードのまま始まって普通に塗れなかった
+  （[#1](https://github.com/yukinashiGG/blender-surface-weight-paint/issues/1)）。
+  Blender はオペレーターの「前回の値」を覚えていて次のボタン呼び出しに渡すため。
+  ぼかしフラグをその対象から外し、ツールバー側も両方のフラグを毎回明示するように
+  した。
+- `mcp_check_events.py` を追加: 実際のキーマップと常駐モードを入力シミュレーションで
+  叩く検証（`--enable-event-simulate` が必要）。
 
 **1.1.2**
 - 名前を **Surface Weight Paint** に変更（旧 Surface Draw）。ツール名・サイドバーの
@@ -183,12 +202,19 @@ blender-surface-weight-paint/
                       surface_weight_paint_icon.dat is the toolbar icon (VCO triangle
                       format, same as Blender's own); tools/make_icon.py writes it
   tools/make_icon.py  icon generator (--preview mocks the toolbar as a PNG)
-  dist/               built zips, e.g. surface_weight_paint_v1_1_2.zip (not committed)
+  dist/               built zips, e.g. surface_weight_paint_v1_1_3.zip (not committed)
   mcp_check.py        verification harness: run with
                       blender --factory-startup --python mcp_check.py
+  mcp_check_events.py strokes through the real keymap / resident mode: run with
+                      blender --factory-startup --enable-event-simulate --python mcp_check_events.py
 ```
 
-The harness builds a test scene, drives the brush's dab routine directly
+`mcp_check.py` builds a test scene, drives the brush's dab routine directly
 (without a real mouse), and checks weights numerically: reaching exact 0 / 1,
 Ctrl per blend mode, locked groups, hidden vertices, selection masks, X
 mirror, auto normalize, Surface Gradient, undo, and clean unregister.
+
+`mcp_check_events.py` feeds simulated mouse and key events to the window, so
+the operator is invoked the way a user invokes it: toolbar keymap items, the
+resident mode button, Shift / Ctrl, Esc mid-stroke, Ctrl+Z, and a second
+resident session after a blur (issue #1).

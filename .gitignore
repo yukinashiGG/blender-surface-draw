@@ -4,6 +4,7 @@ dist/
 _legacy/
 # harness artifacts
 check_log.txt
+check_events_log.txt
 check_ui_*.png
 __pycache__/
 *.pyc

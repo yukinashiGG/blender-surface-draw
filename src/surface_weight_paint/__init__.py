@@ -43,7 +43,7 @@ Verified on Blender 5.2.2 LTS, 4.5.11 LTS, 4.3.1 and 4.2.23 LTS.
 bl_info = {
     "name": "Surface Weight Paint (Geodesic Weight Brush)",
     "author": "Yukinashi",
-    "version": (1, 1, 2),
+    "version": (1, 1, 3),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Weight Paint > Toolbar / Sidebar > Surface Weight Paint",
     "description": "Weight paint brush that falls off along the surface, "
@@ -402,16 +402,21 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
                     "result, written to the left/right-flipped group",
         default=True,
     )
+    # SKIP_SAVE: these two are rewritten while the brush runs (Ctrl/Shift in
+    # resident mode). Without it Blender keeps the operator's last values and
+    # feeds them to the next non-keymap invocation - so after a Shift stroke
+    # in resident mode, pressing "Start Resident Mode" again started in blur
+    # mode and plain strokes did nothing (issue #1).
     invert: BoolProperty(
         name="Invert",
         description="Invert the brush (same as Ctrl+drag)",
-        default=False,
+        default=False, options={'SKIP_SAVE'},
     )
     smooth: BoolProperty(
         name="Blur",
         description="Blend toward the average of edge-connected neighbours "
                     "(same as Shift+drag). Brush weight and blend mode are ignored",
-        default=False,
+        default=False, options={'SKIP_SAVE'},
     )
 
     # ------------------------------------------------------------------
@@ -495,12 +500,16 @@ class PAINT_OT_geodesic_weight_brush(bpy.types.Operator):
         # Invoked from the button: stays resident until Esc.
         self.stroke_mode = (event.type == 'LEFTMOUSE' and event.value == 'PRESS')
 
-        # Defaults from the keymap; in resident mode OR-ed with the modifiers
-        self._base_invert = self.invert
-        self._base_smooth = self.smooth
-        if self.stroke_mode:
-            self.invert = self._base_invert or event.ctrl
-            self.smooth = self._base_smooth or event.shift
+        # Base values come only from what the caller set explicitly (the
+        # toolbar keymap items do; the sidebar button does not). Anything
+        # Blender carried over from a previous run is not "set" and is ignored.
+        props = self.properties
+        self._base_invert = bool(self.invert) if props.is_property_set("invert") else False
+        self._base_smooth = bool(self.smooth) if props.is_property_set("smooth") else False
+        # In stroke mode the modifiers held at the click decide; in resident
+        # mode they are read again at every press (see modal()).
+        self.invert = self._base_invert or (self.stroke_mode and event.ctrl)
+        self.smooth = self._base_smooth or (self.stroke_mode and event.shift)
 
         self.painting = False
         self.last_px = None
@@ -1072,16 +1081,18 @@ class GeodesicWeightTool(bpy.types.WorkSpaceTool):
         bl_options = {'USE_BRUSHES'}
     else:
         bl_data_block = 'DRAW'
+    # Each item sets both flags so a stroke never depends on what the
+    # previous one left behind.
     bl_keymap = (
         ("paint.geodesic_weight_brush",
          {"type": 'LEFTMOUSE', "value": 'PRESS'},
-         {"properties": [("invert", False)]}),
+         {"properties": [("invert", False), ("smooth", False)]}),
         ("paint.geodesic_weight_brush",
          {"type": 'LEFTMOUSE', "value": 'PRESS', "ctrl": True},
-         {"properties": [("invert", True)]}),
+         {"properties": [("invert", True), ("smooth", False)]}),
         ("paint.geodesic_weight_brush",
          {"type": 'LEFTMOUSE', "value": 'PRESS', "shift": True},
-         {"properties": [("smooth", True)]}),
+         {"properties": [("invert", False), ("smooth", True)]}),
     )
 
     @staticmethod
